@@ -4,35 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Passport to Plates</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.development.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.development.js"></script>
+    <!-- Use production versions of React -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #f0f2f5;
-            min-height: 100vh;
-            touch-action: manipulation;
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
         }
-        .game-container {
-            max-width: 100%;
-            margin: 0 auto;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+
+        .typing-text {
+            overflow: hidden;
+            white-space: nowrap;
+            animation: typing 2s steps(40, end);
         }
-        .content-area {
-            flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-in forwards;
         }
-        button {
-            min-height: 44px; /* Better touch targets */
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
-        .ingredient-card {
-            touch-action: manipulation;
+
+        .live-indicator {
+            position: relative;
+        }
+
+        .live-indicator::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: red;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
     </style>
 </head>
@@ -45,7 +62,6 @@
             finalDishImage: 'https://hsabaleuski.notion.site/image/https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2Fc52b34f3-9846-400c-93cb-7e379eafde51%2Fca5af47b-743b-47dd-8d5c-7d584b365306%2Fimage.png?table=block&id=15f8f26d-929b-80c4-83ba-c6618721e277&spaceId=c52b34f3-9846-400c-93cb-7e379eafde51&width=1420&userId=&cache=v2'       // Replace with your image URL
         };
 
-
         const ingredients = [
             { id: 1, name: 'Pasta', price: 50, image: '🍝' },
             { id: 2, name: 'Tomatoes', price: 30, image: '🍅' },
@@ -55,12 +71,45 @@
             { id: 6, name: 'Olive Oil', price: 25, image: '🫒' },
         ];
 
+        function TypewriterText({ text, onComplete }) {
+            const [displayText, setDisplayText] = React.useState('');
+            
+            React.useEffect(() => {
+                let index = 0;
+                const timer = setInterval(() => {
+                    if (index < text.length) {
+                        setDisplayText(prev => prev + text[index]);
+                        index++;
+                    } else {
+                        clearInterval(timer);
+                        if (onComplete) onComplete();
+                    }
+                }, 50);
+                
+                return () => clearInterval(timer);
+            }, [text]);
+
+            return <span className="typing-text">{displayText}</span>;
+        }
+
         function Game() {
             const [gameState, setGameState] = React.useState('start');
             const [money, setMoney] = React.useState(200);
             const [basket, setBasket] = React.useState([]);
             const [followers, setFollowers] = React.useState(1000);
             const [likes, setLikes] = React.useState(0);
+            const [viewers, setViewers] = React.useState(100);
+            const [showPrompt, setShowPrompt] = React.useState(true);
+            const [showTask, setShowTask] = React.useState(false);
+
+            React.useEffect(() => {
+                if (gameState === 'cooking') {
+                    const interval = setInterval(() => {
+                        setViewers(prev => prev + Math.floor(Math.random() * 10));
+                    }, 2000);
+                    return () => clearInterval(interval);
+                }
+            }, [gameState]);
 
             const buyIngredient = (ingredient) => {
                 if (money >= ingredient.price && !basket.find(item => item.id === ingredient.id)) {
@@ -86,40 +135,60 @@
                 setMoney(200);
                 setBasket([]);
                 setLikes(0);
+                setViewers(100);
+                setShowPrompt(true);
+                setShowTask(false);
             };
 
             const renderStart = () => (
                 <div className="p-6 text-center h-full flex flex-col justify-center">
-                    <h2 className="text-3xl font-bold mb-6">Welcome to Rome! 🇮🇹</h2>
-                    <p className="mb-8 text-lg">Your followers want you to create an authentic Italian dish near the Colosseum!</p>
-                    <button 
-                        onClick={() => setGameState('market')}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-4 rounded-lg text-lg w-full"
-                    >
-                        Start Cooking Adventure
-                    </button>
+                    {showPrompt && (
+                        <div className="mb-6">
+                            <TypewriterText 
+                                text="Your followers have a special request..." 
+                                onComplete={() => {
+                                    setTimeout(() => {
+                                        setShowPrompt(false);
+                                        setShowTask(true);
+                                    }, 1000);
+                                }}
+                            />
+                        </div>
+                    )}
+                    {showTask && (
+                        <div className="fade-in">
+                            <h2 className="text-3xl font-bold mb-6">Welcome to Rome! 🇮🇹</h2>
+                            <p className="mb-8 text-lg">Create an authentic Italian dish near the Colosseum!</p>
+                            <button 
+                                onClick={() => setGameState('market')}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-4 rounded-lg text-lg w-full"
+                            >
+                                Start Cooking Adventure
+                            </button>
+                        </div>
+                    )}
                 </div>
             );
 
             const renderMarket = () => (
-                <div className="p-4 content-area">
-                    <div className="sticky top-0 bg-white z-10 pb-4 mb-4 shadow-sm">
-                        <h2 className="text-2xl font-bold mb-2">Local Market</h2>
-                        <div className="flex justify-between text-lg">
-                            <span>Budget: €{money}</span>
-                            <span>Items: {basket.length}</span>
+                <div className="p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold">Local Market</h2>
+                        <div className="text-right">
+                            <p>Budget: €{money}</p>
+                            <p>Items: {basket.length}</p>
                         </div>
                     </div>
                     <div className="space-y-4 mb-24">
                         {ingredients.map(ingredient => (
-                            <div key={ingredient.id} className="border rounded-lg p-4 shadow-sm bg-white ingredient-card">
+                            <div key={ingredient.id} className="border rounded-lg p-4 shadow-sm bg-white">
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center">
                                         <span className="text-3xl mr-3">{ingredient.image}</span>
                                         <span className="text-lg">{ingredient.name}</span>
                                     </div>
                                     <div className="flex flex-col items-end">
-                                        <span className="mb-2 text-lg">€{ingredient.price}</span>
+                                        <span className="mb-2">€{ingredient.price}</span>
                                         {basket.find(item => item.id === ingredient.id) ? (
                                             <button 
                                                 onClick={() => removeIngredient(ingredient)}
@@ -131,11 +200,9 @@
                                             <button 
                                                 onClick={() => buyIngredient(ingredient)}
                                                 disabled={money < ingredient.price}
-                                                className={`px-4 py-2 rounded-lg w-24 ${
-                                                    money < ingredient.price 
-                                                        ? 'bg-gray-300' 
-                                                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                                }`}
+                                                className={`px-4 py-2 rounded-lg w-24 ${money < ingredient.price 
+                                                    ? 'bg-gray-300' 
+                                                    : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
                                             >
                                                 Buy
                                             </button>
@@ -162,17 +229,22 @@
             );
 
             const renderCooking = () => (
-                <div className="p-4 content-area">
-                    <h2 className="text-2xl font-bold mb-4">Cooking at the Colosseum</h2>
-                    <div className="rounded-lg overflow-hidden shadow-lg mb-24">
+                <div className="p-4">
+                    <div className="sticky top-0 bg-white z-10 pb-4 mb-4">
+                        <h2 className="text-2xl font-bold mb-2">Cooking at the Colosseum</h2>
+                        <div className="live-indicator text-red-500 font-semibold">
+                            {viewers} watching
+                        </div>
+                    </div>
+                    <div className="mb-24">
                         <img 
                             src={CONFIG.colosseumImage} 
-                            alt="Colosseum backdrop" 
-                            className="w-full h-64 object-cover"
+                            alt="Colosseum backdrop"
+                            className="w-full h-64 object-cover rounded-lg mb-4" 
                         />
-                        <div className="bg-white p-4">
+                        <div className="bg-white p-4 rounded-lg">
                             <h3 className="text-lg font-semibold mb-3">Your Ingredients:</h3>
-                            <div className="flex flex-wrap gap-4 mb-4">
+                            <div className="flex flex-wrap gap-4">
                                 {basket.map(ingredient => (
                                     <span key={ingredient.id} className="text-3xl">{ingredient.image}</span>
                                 ))}
@@ -191,7 +263,7 @@
             );
 
             const renderFinished = () => (
-                <div className="p-4 content-area">
+                <div className="p-4">
                     <h2 className="text-2xl font-bold mb-4">Dish Complete! 📸</h2>
                     <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-24">
                         <div className="p-4 border-b">
@@ -229,8 +301,9 @@
                 </div>
             );
 
+            // Add the missing return statement
             return (
-                <div className="game-container bg-white">
+                <div className="game-container bg-white min-h-screen">
                     <div className="bg-blue-500 text-white p-4 shadow-md">
                         <div className="flex justify-between items-center">
                             <h1 className="text-2xl font-bold">Passport to Plates</h1>
@@ -248,7 +321,12 @@
             );
         }
 
-        ReactDOM.render(<Game />, document.getElementById('root'));
+        ReactDOM.render(
+            <React.StrictMode>
+                <Game />
+            </React.StrictMode>,
+            document.getElementById('root')
+        );
     </script>
 </body>
 </html>
