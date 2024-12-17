@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passport to Plates</title>
+    <!-- Include React -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.development.js"></script>
+    <!-- Include Babel for JSX -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Image Configuration
+        const CONFIG = {
+            colosseumImage: 'https://hsabaleuski.notion.site/image/https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2Fc52b34f3-9846-400c-93cb-7e379eafde51%2F344867a5-51e5-48ba-b109-456185398033%2Fimage.png?table=block&id=15f8f26d-929b-8052-bd55-efc4508e8abb&spaceId=c52b34f3-9846-400c-93cb-7e379eafde51&width=1420&userId=&cache=v2', // Replace with your image URL
+            finalDishImage: 'https://hsabaleuski.notion.site/image/https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2Fc52b34f3-9846-400c-93cb-7e379eafde51%2Fca5af47b-743b-47dd-8d5c-7d584b365306%2Fimage.png?table=block&id=15f8f26d-929b-80c4-83ba-c6618721e277&spaceId=c52b34f3-9846-400c-93cb-7e379eafde51&width=1420&userId=&cache=v2'       // Replace with your image URL
+        };
+
+        const ingredients = [
+            { id: 1, name: 'Pasta', price: 50, image: '🍝' },
+            { id: 2, name: 'Tomatoes', price: 30, image: '🍅' },
+            { id: 3, name: 'Basil', price: 20, image: '🌿' },
+            { id: 4, name: 'Cheese', price: 40, image: '🧀' },
+            { id: 5, name: 'Garlic', price: 15, image: '🧄' },
+            { id: 6, name: 'Olive Oil', price: 25, image: '🫒' },
+        ];
+
+        function Game() {
+            const [gameState, setGameState] = React.useState('start');
+            const [money, setMoney] = React.useState(200);
+            const [basket, setBasket] = React.useState([]);
+            const [followers, setFollowers] = React.useState(1000);
+            const [likes, setLikes] = React.useState(0);
+
+            const buyIngredient = (ingredient) => {
+                if (money >= ingredient.price && !basket.find(item => item.id === ingredient.id)) {
+                    setMoney(money - ingredient.price);
+                    setBasket([...basket, ingredient]);
+                }
+            };
+
+            const removeIngredient = (ingredient) => {
+                setMoney(money + ingredient.price);
+                setBasket(basket.filter(item => item.id !== ingredient.id));
+            };
+
+            const finishCooking = () => {
+                const newLikes = Math.floor(Math.random() * 500) + 500;
+                setLikes(newLikes);
+                setFollowers(followers + Math.floor(newLikes / 2));
+                setGameState('finished');
+            };
+
+            const resetGame = () => {
+                setGameState('start');
+                setMoney(200);
+                setBasket([]);
+                setLikes(0);
+            };
+
+            const renderStart = () => (
+                <div className="text-center p-6">
+                    <h2 className="text-2xl font-bold mb-4">Welcome to Rome! 🇮🇹</h2>
+                    <p className="mb-4">Your followers want you to create an authentic Italian dish near the Colosseum!</p>
+                    <button 
+                        onClick={() => setGameState('market')}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                    >
+                        Start Cooking Adventure
+                    </button>
+                </div>
+            );
+
+            const renderMarket = () => (
+                <div className="p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold">Local Market</h2>
+                        <div className="text-right">
+                            <p>Budget: €{money}</p>
+                            <p>Items: {basket.length}</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        {ingredients.map(ingredient => (
+                            <div key={ingredient.id} className="border p-4 rounded shadow">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <span className="text-2xl mr-2">{ingredient.image}</span>
+                                        <span>{ingredient.name}</span>
+                                    </div>
+                                    <div>
+                                        <span className="mr-2">€{ingredient.price}</span>
+                                        {basket.find(item => item.id === ingredient.id) ? (
+                                            <button 
+                                                onClick={() => removeIngredient(ingredient)}
+                                                className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                                            >
+                                                Remove
+                                            </button>
+                                        ) : (
+                                            <button 
+                                                onClick={() => buyIngredient(ingredient)}
+                                                disabled={money < ingredient.price}
+                                                className={`px-2 py-1 rounded text-sm ${money < ingredient.price 
+                                                    ? 'bg-gray-300' 
+                                                    : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                                            >
+                                                Buy
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <button 
+                        onClick={() => setGameState('cooking')}
+                        disabled={basket.length === 0}
+                        className={`w-full py-2 rounded ${basket.length === 0 
+                            ? 'bg-gray-300' 
+                            : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                    >
+                        Start Cooking 👨‍🍳
+                    </button>
+                </div>
+            );
+
+            const renderCooking = () => (
+                <div className="p-4">
+                    <div className="mb-4">
+                        <h2 className="text-xl font-bold mb-2">Cooking at the Colosseum</h2>
+                        <div className="bg-gray-100 p-4 rounded-lg">
+                            <img 
+                                src={CONFIG.colosseumImage} 
+                                alt="Colosseum backdrop" 
+                                className="w-full h-48 object-cover rounded-lg mb-4"
+                            />
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {basket.map(ingredient => (
+                                    <span key={ingredient.id} className="text-2xl">{ingredient.image}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={finishCooking}
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded"
+                    >
+                        Finish Dish 📸
+                    </button>
+                </div>
+            );
+
+            const renderFinished = () => (
+                <div className="p-4 text-center">
+                    <h2 className="text-2xl font-bold mb-4">Dish Complete! 📸</h2>
+                    <div className="bg-gray-100 p-4 rounded-lg mb-4">
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="flex items-center">
+                                <span className="mr-2">👨‍🍳</span>
+                                <span>@TravelingChef</span>
+                            </div>
+                            <span>🔄</span>
+                        </div>
+                        <img 
+                            src={CONFIG.finalDishImage} 
+                            alt="Final dish" 
+                            className="w-full h-48 object-cover rounded-lg mb-2"
+                        />
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                                <span className="text-red-500 mr-1">❤️</span>
+                                <span>{likes} likes</span>
+                            </div>
+                            <span>{followers} followers</span>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={resetGame}
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded"
+                    >
+                        Cook Another Dish
+                    </button>
+                </div>
+            );
+
+            return (
+                <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div className="bg-blue-500 text-white p-4">
+                        <div className="flex justify-between items-center">
+                            <h1 className="text-xl font-bold">Passport to Plates</h1>
+                            <div className="flex items-center">
+                                <span className="mr-1">❤️</span>
+                                <span>{followers}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {gameState === 'start' && renderStart()}
+                    {gameState === 'market' && renderMarket()}
+                    {gameState === 'cooking' && renderCooking()}
+                    {gameState === 'finished' && renderFinished()}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<Game />, document.getElementById('root'));
+    </script>
+</body>
+</html>
